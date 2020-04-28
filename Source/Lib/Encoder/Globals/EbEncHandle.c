@@ -219,7 +219,7 @@ void eb_set_thread_management_parameters(EbSvtAv1EncConfiguration *config_ptr)
     uint32_t num_logical_processors = get_num_processors();
     // For system with a single processor group(no more than 64 logic processors all together)
     // Affinity of the thread can be set to one or more logical processors
-    if (config_ptr->logical_processors == 1 && config_ptr->unpin_lp1 == 1) {
+    if (config_ptr->logical_processors == 1 && config_ptr->unpin == 1) {
         group_affinity.Mask = get_affinity_mask(num_logical_processors);
     }
     else {
@@ -254,7 +254,7 @@ void eb_set_thread_management_parameters(EbSvtAv1EncConfiguration *config_ptr)
     }
 #elif defined(__linux__)
     uint32_t num_logical_processors = get_num_processors();
-    if (config_ptr->logical_processors == 1 && config_ptr->unpin_lp1 == 1) {
+    if (config_ptr->logical_processors == 1 && config_ptr->unpin == 1) {
         pthread_getaffinity_np(pthread_self(), sizeof(cpu_set_t), &group_affinity);
     }
     else {
@@ -1699,7 +1699,8 @@ EB_API EbErrorType svt_av1_enc_init(EbComponentType *svt_enc_component)
     * Thread Handles
     ************************************/
     EbSvtAv1EncConfiguration   *config_ptr = &enc_handle_ptr->scs_instance_array[0]->scs_ptr->static_config;
-    if (config_ptr->logical_processors == 1)
+    config_ptr->unpin = (config_ptr->logical_processors == 1) ? 1 : config_ptr->unpin;
+    if ((config_ptr->logical_processors == 1) || (config_ptr->unpin == 0))
     eb_set_thread_management_parameters(config_ptr);
 
     control_set_ptr = enc_handle_ptr->scs_instance_array[0]->scs_ptr;
@@ -2276,7 +2277,7 @@ void copy_api_from_app(
     scs_ptr->static_config.channel_id = ((EbSvtAv1EncConfiguration*)config_struct)->channel_id;
     scs_ptr->static_config.active_channel_count = ((EbSvtAv1EncConfiguration*)config_struct)->active_channel_count;
     scs_ptr->static_config.logical_processors = ((EbSvtAv1EncConfiguration*)config_struct)->logical_processors;
-    scs_ptr->static_config.unpin_lp1 = ((EbSvtAv1EncConfiguration*)config_struct)->unpin_lp1;
+    scs_ptr->static_config.unpin = ((EbSvtAv1EncConfiguration*)config_struct)->unpin;
     scs_ptr->static_config.target_socket = ((EbSvtAv1EncConfiguration*)config_struct)->target_socket;
     scs_ptr->static_config.qp = ((EbSvtAv1EncConfiguration*)config_struct)->qp;
     scs_ptr->static_config.recon_enabled = ((EbSvtAv1EncConfiguration*)config_struct)->recon_enabled;
@@ -3067,7 +3068,7 @@ EbErrorType eb_svt_enc_init_parameter(
 
     // Channel info
     config_ptr->logical_processors = 0;
-    config_ptr->unpin_lp1 = 1;
+    config_ptr->unpin = 0;
     config_ptr->target_socket = -1;
     config_ptr->channel_id = 0;
     config_ptr->active_channel_count = 1;
